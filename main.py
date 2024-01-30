@@ -1,109 +1,95 @@
+#Famous card game - War
 import random
-import pickle
-
-class Card:
-    def __init__(self, rank, suit):
-        self.rank = rank
-        self.suit = suit
-
-    def __str__(self):
-        return f"{self.rank} of {self.suit}"
+ranks=[2,3,4,5,6,7,8,9,10,'J','K','A','Q']
+design =['H','D','S','C']
 
 class Deck:
     def __init__(self):
-        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-        suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
-        self.cards = [Card(rank, suit) for rank in ranks for suit in suits]
+        print("Creating new ordered deck!!")
+        self.cards=[(j,i) for j in design for i in ranks]
+    def shuffle(self):
+        print("Shuffling Deck")
         random.shuffle(self.cards)
+    def split_half(self):
+        return (self.cards[:26],self.cards[26:]) 
 
-    def deal(self):
-        return self.cards.pop()
-
+class Hand:
+    def __init__(self,cards_count):
+         self.cards_count=cards_count
+    def __str__(self):
+        return "Contains {} cards".format(len(self.cards_count))
+    def add(self,added_cards):
+        self.cards_count.extend(added_cards)
+    def remove(self):
+        return self.cards_count.pop()
 class Player:
-    def __init__(self, name):
-        self.name = name
-        self.hand = []
-
-    def add_card(self, card):
-        self.hand.append(card)
-
+    def __init__(self,name,hand):
+        self.name=name
+        self.hand=hand
     def play_card(self):
-        return self.hand.pop(0)
-
-def save_game(players):
-    with open('savegame.pkl', 'wb') as file:
-        pickle.dump(players, file)
-
-def load_game():
-    try:
-        with open('savegame.pkl', 'rb') as file:
-            return pickle.load(file)
-    except FileNotFoundError:
-        return None
-
-def war_game():
-    print("Welcome to the War card game!")
-
-    # Check for saved game
-    players = load_game()
-
-    if not players:
-        # Set up a new game
-        player1 = Player("Player 1")
-        player2 = Player("Player 2")
-
-        deck = Deck()
-        for _ in range(len(deck.cards) // 2):
-            player1.add_card(deck.deal())
-            player2.add_card(deck.deal())
-
-        players = [player1, player2]
-
-    while True:
-        for player in players:
-            print(f"{player.name}'s turn.")
-            input("Press Enter to play a card...")
-
-            card = player.play_card()
-            print(f"{player.name} played: {card}")
-
-        # Check the winner
-        if player1.hand[-1].rank > player2.hand[-1].rank:
-            print("Player 1 wins the round!")
-            player1.add_card(player2.play_card())
-        elif player1.hand[-1].rank < player2.hand[-1].rank:
-            print("Player 2 wins the round!")
-            player2.add_card(player1.play_card())
+        drawn_card = self.hand.remove()
+        print("{} has placed : {}".format(self.name,drawn_card))
+        print("\n")
+        return drawn_card
+    def remove_war_cards(self):
+        war_cards=[]
+        if len(self.hand.cards_count)<3:
+            return self.hand.cards_count
         else:
-            print("It's a tie! WAR!")
+            for x in range(3):
+                war_cards.append(self.hand.cards_count.pop())
+            return war_cards
+    def still_has_cards(self):
+        """
+        Return true if player has cards left
+        """
+        return len(self.hand.cards_count) != 0
+print("Welcome to War, Let's run into our game...")
+# Create new deck and split it into half
+d= Deck()
+d.shuffle()
+half1,half2=d.split_half()
 
-            # In a tie, play 3 additional cards
-            for _ in range(3):
-                for player in players:
-                    print(f"{player.name}'s turn.")
-                    input("Press Enter to play a card...")
-                    player.play_card()
+#Create both players !
+comp = Player("Computer",Hand(half1))
+name=input("Enter your name")
+human = Player(name,Hand(half2))
 
-            # Check the winner again after the tiebreaker
-            if player1.hand[-1].rank > player2.hand[-1].rank:
-                print("Player 1 wins the round!")
-                player1.add_card(player2.play_card())
-            elif player1.hand[-1].rank < player2.hand[-1].rank:
-                print("Player 2 wins the round!")
-                player2.add_card(player1.play_card())
-            else:
-                print("It's a tie again! The war continues...")
+total_rounds =0
+war_count = 0
 
-        # Check for a winner
-        if not player1.hand:
-            print("Player 2 wins the game!")
-            break
-        elif not player2.hand:
-            print("Player 1 wins the game!")
-            break
+while human.still_has_cards() and comp.still_has_cards():
+    total_rounds += 1
+    print("Time for a new round")
+    print("Here are the current standings")
+    print(human.name + "has the count:"+str(len(human.hand.cards_count)))
+    print(comp.name + "has the count:"+str(len(comp.hand.cards_count)))
+    print("Play a card!")
+    print("\n")
 
-        # Save the game state
-        save_game(players)
+    table_cards = []
 
-if __name__ == "__main__":
-    war_game()
+    c_card = comp.play_card()
+    p_card = human.play_card()
+    table_cards.append(c_card)
+    table_cards.append(p_card)
+
+    if c_card[1] == p_card[1]:
+        war_count += 1
+        print("War!!")
+        table_cards.extend(human.remove_war_cards())
+        table_cards.extend(comp.remove_war_cards())
+
+        if ranks.index(c_card[1]) < ranks.index(p_card[1]):
+            human.hand.add(table_cards)
+        else:
+            comp.hand.add(table_cards)
+    else:
+        if ranks.index(c_card[1]) < ranks.index(p_card[1]):
+            human.hand.add(table_cards)
+        else:
+            comp.hand.add(table_cards)
+print("Game over,number of rounds:"+str(total_rounds))
+print("A war happened " + str(war_count) +" times")
+print("Does the computer still have cards?\t",str(comp.still_has_cards()))
+print("Does the Human player still have cards?\t:",str(human.still_has_cards()))
